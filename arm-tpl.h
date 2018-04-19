@@ -1,0 +1,124 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+// Copyright 2016 ARM Limited. All rights reserved
+//===----------------------------------------------------------------------===//
+
+#ifndef ARM_TPL_H
+#define ARM_TPL_H
+
+#include <stdint.h>
+#include <time.h>
+
+#define _ARMTPL_THREAD_ABI_VISIBILITY __attribute__ ((__visibility__("default")))
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
+    time_t tv_sec;
+    unsigned long tv_nsec;
+} timespec;
+
+// Clocks
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_clock_realtime(timespec* __ts);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_clock_monotonic(timespec* __ts);
+
+// Mutexes
+typedef struct {
+    _Atomic uintptr_t data;
+} __ARM_TPL_mutex_t;
+
+#define _ARMCPP_MUTEX_INITIALIZER {(uintptr_t) 0}
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_recursive_mutex_init(__ARM_TPL_mutex_t* __m);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_mutex_lock(__ARM_TPL_mutex_t* __m);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_mutex_trylock(__ARM_TPL_mutex_t* __m);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_mutex_unlock(__ARM_TPL_mutex_t* __m);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_mutex_destroy(__ARM_TPL_mutex_t* __m);
+
+// Condition variables
+typedef struct {
+    _Atomic uintptr_t data;
+} __ARM_TPL_condvar_t;
+
+#define _ARMCPP_CONDVAR_INITIALIZER {(uintptr_t) 0}
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_condvar_signal(__ARM_TPL_condvar_t* __cv);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_condvar_broadcast(__ARM_TPL_condvar_t* __cv);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_condvar_wait(__ARM_TPL_condvar_t* __cv, __ARM_TPL_mutex_t* __m);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_condvar_timedwait(__ARM_TPL_condvar_t* __cv,
+                                __ARM_TPL_mutex_t* __m,
+                                timespec* __ts);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_condvar_destroy(__ARM_TPL_condvar_t* __cv);
+
+// Thread ids
+typedef uint32_t __ARM_TPL_thread_id;
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_thread_id_compare(__ARM_TPL_thread_id __tid1,
+                                __ARM_TPL_thread_id __tid2);
+
+// Threads
+typedef struct {
+    uintptr_t data;
+} __ARM_TPL_thread_t;
+
+#define _ARMCPP_NULL_THREAD {0}
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_thread_create(__ARM_TPL_thread_t* __t,
+                            void* (*__func)(void*),
+                            void* __arg);
+_ARMTPL_THREAD_ABI_VISIBILITY
+__ARM_TPL_thread_id __ARM_TPL_thread_get_current_id();
+_ARMTPL_THREAD_ABI_VISIBILITY
+__ARM_TPL_thread_id __ARM_TPL_thread_get_id(const __ARM_TPL_thread_t* __t);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_thread_join(__ARM_TPL_thread_t* __t);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_thread_detach(__ARM_TPL_thread_t* __t);
+_ARMTPL_THREAD_ABI_VISIBILITY
+void __ARM_TPL_thread_yield();
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_thread_nanosleep(const timespec *req, timespec *rem);
+_ARMTPL_THREAD_ABI_VISIBILITY
+unsigned __ARM_TPL_thread_hw_concurrency();
+
+// Execute once
+typedef volatile unsigned long __ARM_TPL_exec_once_flag;
+#define _ARMCPP_EXEC_ONCE_INITIALIZER {0}
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_execute_once(__ARM_TPL_exec_once_flag *__flag,
+                          void (*__init_routine)(void));
+
+// Thread local storage
+typedef uint32_t __ARM_TPL_tls_key;
+
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_tls_create(__ARM_TPL_tls_key* __key, void (*__at_exit)(void*));
+_ARMTPL_THREAD_ABI_VISIBILITY
+void* __ARM_TPL_tls_get(__ARM_TPL_tls_key __key);
+_ARMTPL_THREAD_ABI_VISIBILITY
+int __ARM_TPL_tls_set(__ARM_TPL_tls_key __key, void* __p);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#undef _ARMTPL_THREAD_ABI_VISIBILITY
+
+#endif // ARM_TPL_H

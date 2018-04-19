@@ -1,0 +1,16 @@
+#include <arm-tpl.h>
+
+extern "C" void ARMTPLMiscellaneousInit()
+{
+}
+
+int __ARM_TPL_execute_once(__ARM_TPL_exec_once_flag * __flag,
+                           void (*__init_routine)(void))
+{
+  if (*__flag == 0)
+  {
+    __init_routine();
+    *__flag = 0;
+  }
+  return 0;
+}

@@ -6,10 +6,10 @@
 
 ConditionVariable::ConditionVariable()
 {
-  s = xSemaphoreCreateCounting(10, 0);
+  s = xSemaphoreCreateCounting(99999, 0);
   if (s == nullptr)
     throw std::bad_alloc();
-  h = xSemaphoreCreateCounting(10, 0);
+  h = xSemaphoreCreateCounting(99999, 0);
   if (h == nullptr)
   {
     vSemaphoreDelete(s);

@@ -1,9 +1,5 @@
 #include <arm-tpl.h>
 
-void ARMTPLMiscellaneousInit()
-{
-}
-
 extern "C" int __ARM_TPL_execute_once(__ARM_TPL_exec_once_flag * __flag,
                            void (*__init_routine)(void))
 {

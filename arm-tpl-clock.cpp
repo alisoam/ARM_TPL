@@ -1,10 +1,7 @@
 #include <arm-tpl.h>
-#include "tpl.h"
 #include <ctime>
-
-void ARMTPLClockInit()
-{
-}
+#include "FreeRTOS.h"
+#include "task.h"
 
 extern "C" int __ARM_TPL_clock_realtime(timespec* __ts)
 {

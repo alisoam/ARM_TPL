@@ -5,12 +5,6 @@ void ARMTPLInit();
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-extern "C" void ARMTPLInit();
-extern void ARMTPLMutexInit();
-extern void ARMTPLThreadInit();
-extern void ARMTPLCondVarInit();
-extern void ARMTPLClockInit();
-extern void ARMTPLMiscellaneousInit();
 
 enum MutexType
 {

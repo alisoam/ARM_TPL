@@ -1,15 +1,15 @@
 #include <arm-tpl.h>
 #include "tpl.h"
 #include <new>
-
-static SemaphoreHandle_t conditionVariableCreationGuardMutex;
+#include <cstdint>
+#include <stdatomic.h>
 
 ConditionVariable::ConditionVariable()
 {
-  s = xSemaphoreCreateCounting(999999, 0);
+  s = xSemaphoreCreateCounting(10, 0);
   if (s == nullptr)
     throw std::bad_alloc();
-  h = xSemaphoreCreateCounting(999999, 0);
+  h = xSemaphoreCreateCounting(10, 0);
   if (h == nullptr)
   {
     vSemaphoreDelete(s);
@@ -96,47 +96,42 @@ void ConditionVariable::broadcast()
   xSemaphoreGive(x);
 }
 
-void ARMTPLCondVarInit()
-{
-  conditionVariableCreationGuardMutex = xSemaphoreCreateMutex();
-}
-
 static int checkCreate(volatile __ARM_TPL_condvar_t* __vcv)
 {
   if (__vcv->data == 0)
   {
-    while (xSemaphoreTake(conditionVariableCreationGuardMutex, portMAX_DELAY) != pdTRUE);
-    if (__vcv->data == 0)
-      try
-      {
-        __vcv->data = (uintptr_t)new ConditionVariable();
-      }
-      catch (...)
-      {
-        return -1;
-      }
-    xSemaphoreGive(conditionVariableCreationGuardMutex);
+    uintptr_t cv_new;
+    try
+    {
+      cv_new = reinterpret_cast<uintptr_t>(new ConditionVariable());
+    }
+    catch (...)
+    {
+      return -1;
+    }
+    uintptr_t cv_null = 0;
+    if (!atomic_compare_exchange_strong(&__vcv->data, &cv_null, cv_new))
+    {
+      delete reinterpret_cast<ConditionVariable*>(cv_new);
+    }
   }
   return 0;
 }
 
-extern "C" int __ARM_TPL_condvar_wait(__ARM_TPL_condvar_t* __cv,
-                           __ARM_TPL_mutex_t* __m)
+extern "C" int __ARM_TPL_condvar_wait(__ARM_TPL_condvar_t* __cv, __ARM_TPL_mutex_t* __m)
 {
   volatile __ARM_TPL_condvar_t* __vcv = __cv;
-  if (checkCreate(__vcv))
+  if (checkCreate(__vcv) != 0)
     return -1;
   struct MutexStruct* mS = (struct MutexStruct*)(__m->data);
   ((ConditionVariable*) __vcv->data)->wait(mS->mutex, mS->type == RECURSIVE);
   return 0;
 }
 
-extern "C" int __ARM_TPL_condvar_timedwait(__ARM_TPL_condvar_t* __cv,
-                                __ARM_TPL_mutex_t* __m,
-                                timespec* __ts)
+extern "C" int __ARM_TPL_condvar_timedwait(__ARM_TPL_condvar_t* __cv, __ARM_TPL_mutex_t* __m, timespec* __ts)
 {
   volatile __ARM_TPL_condvar_t* __vcv = __cv;
-  if (checkCreate(__vcv))
+  if (checkCreate(__vcv) != 0)
     return -1;
   timespec now;
   if (__ARM_TPL_clock_realtime(&now) != 0)

@@ -1,6 +1,6 @@
 #include <arm-tpl.h>
 #include "tpl.h"
-
+#include <cstdio>
 static unsigned int localStorageKeyCounter = 0;
 
 static void cTask(void* arg)
@@ -27,10 +27,6 @@ static void cTask(void* arg)
   vPortFree((void*)threadStructPtr);
   vTaskDelete(nullptr);
   for(;;);
-}
-
-void ARMTPLThreadInit()
-{
 }
 
 extern "C" int __ARM_TPL_thread_create(__ARM_TPL_thread_t* __t,

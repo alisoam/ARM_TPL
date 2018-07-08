@@ -1,40 +1,32 @@
 #include <arm-tpl.h>
+#include <cstdint>
+#include <stdatomic.h>
 #include "tpl.h"
-
-static SemaphoreHandle_t mutexCreationGuardMutex;
-
-void ARMTPLMutexInit()
-{
-  mutexCreationGuardMutex = xSemaphoreCreateMutex();
-}
 
 static int checkCreate(volatile __ARM_TPL_mutex_t* __vm, bool recursive = false)
 {
   if (__vm->data == 0)
   {
-		xSemaphoreTake(mutexCreationGuardMutex, portMAX_DELAY);
-    int toBeReturned = -1;
-		if (__vm->data == 0)
+    uintptr_t mut_null = 0;
+    MutexStruct* mutexStructPtr = (MutexStruct*)pvPortMalloc(sizeof(MutexStruct));
+    if (mutexStructPtr == nullptr)
+      return -1;
+    if (recursive)
+      mutexStructPtr->mutex = xSemaphoreCreateRecursiveMutex();
+    else
+      mutexStructPtr->mutex = xSemaphoreCreateMutex();
+    if (mutexStructPtr->mutex == nullptr)
     {
-      MutexStruct* mutexStructPtr = (MutexStruct*)pvPortMalloc(sizeof(MutexStruct));
-      if (mutexStructPtr == nullptr)
-        goto exit;
-      if (recursive)
-        mutexStructPtr->mutex = xSemaphoreCreateRecursiveMutex();
-      else
-        mutexStructPtr->mutex = xSemaphoreCreateMutex();
-      if (mutexStructPtr->mutex == nullptr)
-      {
-        vPortFree(mutexStructPtr);
-        goto exit;
-      }
-      mutexStructPtr->type = recursive? RECURSIVE: NORMAL;
-      __vm->data = (uintptr_t)(mutexStructPtr);
+      vPortFree(mutexStructPtr);
+      return -1;
     }
-    toBeReturned = 0;
-    exit:
-      xSemaphoreGive(mutexCreationGuardMutex);
-      return toBeReturned;
+    mutexStructPtr->type = recursive? RECURSIVE: NORMAL;
+    uintptr_t mut_new = reinterpret_cast<uintptr_t>(mutexStructPtr);
+    if (!atomic_compare_exchange_strong(&__vm->data, &mut_null, mut_new))
+    {
+      vSemaphoreDelete(mutexStructPtr->mutex);
+      vPortFree(mutexStructPtr);
+    }
 	}
   return 0;
 }

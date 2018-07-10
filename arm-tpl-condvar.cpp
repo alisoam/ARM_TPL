@@ -50,23 +50,23 @@ void ConditionVariable::wait(SemaphoreHandle_t lock, bool recursive)
 int ConditionVariable::timedWait(SemaphoreHandle_t lock, bool recursive, unsigned int timeoutMS)
 {
   int toBeReturned = 0;
-  while (xSemaphoreTake(x, portMAX_DELAY) != pdTRUE)
+  while (xSemaphoreTake(x, portMAX_DELAY) != pdTRUE);
   xSemaphoreGive(s);
   xSemaphoreGive(x);
   if (recursive)
     xSemaphoreGiveRecursive(lock);
   else
     xSemaphoreGive(lock);
-  if (xSemaphoreTake(h, timeoutMS * portTICK_RATE_MS) != pdTRUE)
+  if (xSemaphoreTake(h, timeoutMS * portTICK_PERIOD_MS) != pdTRUE)
   {
     while (xSemaphoreTake(x, portMAX_DELAY) != pdTRUE);
-    if (xSemaphoreTake(s, 0) != pdTRUE)
+    if (xSemaphoreTake(h, 0) != pdTRUE)
     {
-      if (xSemaphoreTake(h, 0) != pdTRUE)
+      if (xSemaphoreTake(s, 0) != pdTRUE)
         toBeReturned = -1;
+      else
+        toBeReturned = 1;
     }
-    else
-      toBeReturned = 1;
     xSemaphoreGive(x);
   }
   if (recursive)
@@ -111,9 +111,7 @@ static int checkCreate(volatile __ARM_TPL_condvar_t* __vcv)
     }
     uintptr_t cv_null = 0;
     if (!atomic_compare_exchange_strong(&__vcv->data, &cv_null, cv_new))
-    {
       delete reinterpret_cast<ConditionVariable*>(cv_new);
-    }
   }
   return 0;
 }
@@ -138,7 +136,9 @@ extern "C" int __ARM_TPL_condvar_timedwait(__ARM_TPL_condvar_t* __cv, __ARM_TPL_
     return -1;
   struct MutexStruct* mS = (struct MutexStruct*)(__m->data);
   unsigned int timeoutMS = (__ts->tv_sec - now.tv_sec) * 1000 + (__ts->tv_nsec - now.tv_nsec) / 1000000;
-  return ((ConditionVariable*) __vcv->data)->timedWait(mS->mutex, mS->type == RECURSIVE, timeoutMS);
+  if (((ConditionVariable*) __vcv->data)->timedWait(mS->mutex, mS->type == RECURSIVE, timeoutMS) < 0)
+    return -1;
+  return 0;
 }
 
 extern "C" int __ARM_TPL_condvar_signal(__ARM_TPL_condvar_t* __cv)
